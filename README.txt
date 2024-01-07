@@ -40,3 +40,6 @@ the first version.
 • A more subtle application of the texture. It cannot be stretched on any of the sides
 • There’s got to be more bonuses that you can implement.
 
+
+![Alt text](/images/vlcsnap-2024-01-07-20h37m46s401.png?raw=true )
+![Alt text](images/vlcsnap-2024-01-07-20h37m46s401.png?raw=true )
