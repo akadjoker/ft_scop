@@ -39,10 +39,4 @@ human touch, but normalized a little by the program. It’s about rendering corr
 the first version.
 • A more subtle application of the texture. It cannot be stretched on any of the sides
 • There’s got to be more bonuses that you can implement.
-<div>
-<br />
 
-<img align="right" alt="PNG" src="https://github.com/akadjoker/ft_scop/blob/main/images/vlcsnap-2024-01-07-20h37m46s401.png?raw=true" width="400" height="320" />
-
-<br />
-</div>
