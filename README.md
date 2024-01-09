@@ -43,3 +43,8 @@ the first version.
 
 # Some screenshots
 ![1](images/vlcsnap-2024-01-07-20h37m46s401.png)
+![2](images/vlcsnap-2024-01-07-20h37m55s462.png)
+![3](images/vlcsnap-2024-01-07-20h38m08s901.png)
+![4](images/vlcsnap-2024-01-07-20h38m23s761.png)
+
+
