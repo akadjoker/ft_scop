@@ -41,5 +41,5 @@ the first version.
 • There’s got to be more bonuses that you can implement.
 
 
-![Alt text](/images/vlcsnap-2024-01-07-20h37m46s401.png?raw=true )
-![Alt text](images/vlcsnap-2024-01-07-20h37m46s401.png?raw=true )
+# Some screenshots
+![1](images/vlcsnap-2024-01-07-20h37m46s401.png)
