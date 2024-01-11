@@ -393,9 +393,7 @@ bool Mesh::Load(const std::string &filename)
 
        	    std::string curline;
 			int i = -1;
-			int texid = 0;
-			int normalid = 0;
-
+			
 			std::vector<Vector3> vertices;
 			std::vector<Vector3> normals;
 			std::vector<Vector2> texposs;
@@ -403,8 +401,7 @@ bool Mesh::Load(const std::string &filename)
             std::vector<Uint16> uvfaces;
             std::vector<Uint16> nfaces;
 
-            bool haveNormals = false;
-            bool haveTexCoords = false;
+ 
 
             Surface *surface = addSurface(0);
 
@@ -426,10 +423,10 @@ bool Mesh::Load(const std::string &filename)
 					} else if (parts[0] == "vt")
                     {
 						texposs.push_back(Vector2((float)atof(parts[1].c_str()), (float)atof(parts[2].c_str())));
-                        haveTexCoords = true;
+                        
 					} else if (parts[0] == "vn")
                     {
-                        haveNormals = true;
+                        
 						normals.push_back(Vector3((float)atof(parts[1].c_str()), (float)atof(parts[2].c_str()), (float)atof(parts[3].c_str())));
 					} else if (parts[0] == "f")
                     {
@@ -697,7 +694,7 @@ void Mesh::ShadesOfGray()
         for (auto& vertex : surface->m_vertices)
         {
             Vector3 normal = vertex.normal;
-            Color  color = vertex.color;
+            
 
            
             if ( (normal.z == 1.0f || normal.z==-1.0f) && normal.y <= 0.5f && normal.x <= 0.5f )

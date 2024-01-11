@@ -155,7 +155,7 @@ int main()
     float uvForce = 1.0f;
     bool isKeyShift = false;
     int BlendState=2;
-    int lastBlendState=0;
+    
     float blndAnimation = 0.0f;
 
     bool quit = false;
@@ -397,7 +397,7 @@ int main()
                 if (blndAnimation > 1.0f) 
                 {
                     blndAnimation = 1.0f;
-                    lastBlendState = 0;
+                    
                     BlendState=2;
                 }
               //  model->Setlerp(blndAnimation);
@@ -412,7 +412,7 @@ int main()
                 
                 if (blndAnimation < 0.0f) 
                 {
-                    lastBlendState = 1;
+                    
                     blndAnimation = 0.0f;
                     BlendState=2;
                 }
