@@ -28,6 +28,7 @@ const Color Color::GOLD(1.0f,0.8f,0.0f);
 const Color Color::SILVER(0.75f,0.75f,0.75f);
 const Color Color::BRONZE(0.8f,0.5f,0.2f);
 const Color Color::SKYBLUE(0.4f,0.8f,1.0f);
+const Color Color::ShadesOfGray(0.5f,0.5f,0.5f);
 
 
 RenderBatch::RenderBatch()

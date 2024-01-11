@@ -64,9 +64,15 @@ class GUI
     void OnMouseDown(int x, int y, int button);
     void OnMouseUp(int x, int y, int button);
 
+    void OnKeyDown(Uint32 key);
+    void OnKeyUp(Uint32 key);
+
+    bool GetKeyState(Uint32 key);
+
     private:
         Skin* m_skin;
         std::vector<Widget*> m_widgets;
+
 };
 
 
@@ -104,7 +110,12 @@ public:
     void MouseMove(int x, int y);
     void MouseDown(int x, int y, int button);
     void MouseUp(int x, int y, int button);
+    void KeyDown(Uint32 key);
+    void KeyUp(Uint32 key);
     void Update(float delta);
+
+    bool getKey();
+    void SetkeyMap(bool use, Uint32 key);
 
 
 protected:
@@ -113,6 +124,9 @@ protected:
     virtual void OnMouseMove(int x, int y);
     virtual void OnMouseDown(int x, int y, int button);
     virtual void OnMouseUp(int x, int y, int button);
+    virtual void OnReset();
+    virtual void OnKeyDown(Uint32 key);
+    virtual void OnKeyUp(Uint32 key);
 
     GUI* m_gui;
     bool m_visible;
@@ -121,6 +135,8 @@ protected:
     Vector2 m_position;
     Vector2 m_size;
     Rectangle m_bounds;
+    bool iskeyMappped;
+    Uint32 m_key;
    
 private:
     std::vector<Widget*> m_children;
@@ -192,6 +208,11 @@ protected:
     void OnMouseMove(int x, int y) override;
     void OnMouseDown(int x, int y, int button) override;
     void OnMouseUp(int x, int y, int button) override;
+    void OnKeyDown(Uint32 key) override;
+    void OnKeyUp(Uint32 key) override;
+    
+
+
 
 private:
     std::string m_text;
@@ -211,7 +232,7 @@ class Slider : public Widget
     friend class Window;
 public:
     Slider(bool vertical ,float x, float y, float width, float height, float min, float max, float value);
-    void SetValue(float value) { m_value = value; }
+    void SetValue(float value) ;
     float GetValue() const { return m_value; }
 
     std::function<void(float)> OnValueChanged;
@@ -222,6 +243,7 @@ protected:
     void OnMouseMove(int x, int y) override;
     void OnMouseDown(int x, int y, int button) override;
     void OnMouseUp(int x, int y, int button) override;
+
 private:
     float m_min;
     float m_max;

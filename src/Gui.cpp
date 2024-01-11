@@ -61,6 +61,7 @@ Window *GUI::CreateWindow(const std::string &title, float x, float y, float widt
 
 void GUI::Update(float delta)
 {
+   
     for (unsigned int i = 0; i < m_widgets.size(); i++)
     {
         m_widgets[i]->Update(delta);
@@ -98,8 +99,31 @@ void GUI::OnMouseUp(int x, int y, int button)
     {
     
             m_widgets[i]->MouseUp(x, y, button);
+            m_widgets[i]->OnReset();
+
+    }
+
+}
+
+void GUI::OnKeyDown(Uint32 key)
+{
+    for (unsigned int i = 0; i < m_widgets.size(); i++)
+    {
+        m_widgets[i]->KeyDown(key);
+    }
+    
+}
+
+void GUI::OnKeyUp(Uint32 key)
+{
+    
+    for (unsigned int i = 0; i < m_widgets.size(); i++)
+    {
+        m_widgets[i]->KeyUp(key);
     }
 }
+
+
 
 Widget::Widget()
 {
@@ -107,6 +131,8 @@ Widget::Widget()
     m_visible = true;
     m_gui = nullptr;
     m_focus = false;
+    iskeyMappped = false;
+    m_key = 0;
 
 }
 
@@ -187,6 +213,14 @@ void Widget::Update(float delta)
         m_children[i]->Update(delta);
     }
 }
+void Widget::SetkeyMap(bool use, Uint32 key)
+{
+    iskeyMappped = use;
+    m_key = key;
+}
+
+
+
 void Widget::OnUpdate(float delta)
 {
     (void)delta;
@@ -219,6 +253,24 @@ void Widget::MouseUp(int x, int y, int button)
     }
 }
 
+void Widget::KeyDown(Uint32 key)
+{
+    OnKeyDown(key);
+    for (unsigned int i = 0; i < m_children.size(); i++)
+    {
+        m_children[i]->KeyDown(key);
+    }
+}
+
+void Widget::KeyUp(Uint32 key)
+{
+    OnKeyUp(key);
+    for (unsigned int i = 0; i < m_children.size(); i++)
+    {
+        m_children[i]->KeyUp(key);
+    }
+}
+
 void Widget::OnMouseMove(int x, int y)
 {
     (void)x;
@@ -241,6 +293,24 @@ void Widget::OnMouseUp(int x, int y, int button)
     (void)y;
     (void)button;
     
+}
+
+void Widget::OnReset()
+{
+    for (unsigned int i = 0; i < m_children.size(); i++)
+    {
+        m_children[i]->OnReset();
+    }
+}
+
+void Widget::OnKeyDown(Uint32 key)
+{
+    (void)key;
+}
+
+void Widget::OnKeyUp(Uint32 key)
+{
+    (void)key;
 }
 
 Window::Window(const std::string &title, float x, float y, float width, float height): Widget()
@@ -362,6 +432,13 @@ Slider::Slider(bool vertical, float x, float y, float width, float height, float
 
 }
 
+void Slider::SetValue(float value)
+{
+    m_value = value;
+    if (OnValueChanged)
+        OnValueChanged(m_value);
+}
+
 void Slider::OnDraw(RenderBatch *batch)
 {
     Skin * skin = m_gui->GetSkin();
@@ -373,13 +450,13 @@ void Slider::OnDraw(RenderBatch *batch)
         
         batch->DrawRectangle((int)GetRealX(),(int) GetRealY(), (int)m_size.x,(int) m_grow, skin->GetColor(SCROLLBAR_FILL),true);
         batch->DrawRectangle((int)GetRealX(),(int) GetRealY()+(int)m_grow, (int)m_size.x, 5, skin->GetColor(SCROLLBAR_NOB),true);
-        font->DrawText(batch,m_bounds.x + m_bounds.width,m_bounds.y+(m_bounds.height/2),false,true, Color(1, 1, 1),"%02.f",m_value);
+        font->DrawText(batch,m_bounds.x + m_bounds.width,m_bounds.y+(m_bounds.height/2),false,true, Color(1, 1, 1),"%03.f",m_value);
     }
     else
     {
         batch->DrawRectangle((int)GetRealX(),(int) GetRealY(), (int)m_grow,(int) m_size.y, skin->GetColor(SCROLLBAR_FILL),true);
         batch->DrawRectangle((int)GetRealX()+(int)m_grow, (int) GetRealY(), 5,(int) m_size.y, skin->GetColor(SCROLLBAR_NOB),true);
-        font->DrawText(batch,m_bounds.x + m_bounds.width,m_bounds.y+(m_bounds.height/2),false,true, Color(1, 1, 1),"%02.f",m_value);
+        font->DrawText(batch,m_bounds.x + m_bounds.width,m_bounds.y+(m_bounds.height/2),false,true, Color(1, 1, 1),"%03.f",m_value);
 
     }
     if (m_focus)
@@ -479,6 +556,7 @@ void Slider::OnMouseUp(int x, int y, int button)
 
 }
 
+
 Label::Label(const std::string &text, float x, float y): Widget()
 {
     m_text = text;
@@ -540,32 +618,11 @@ void Button::OnUpdate(float delta)
         text_width = font->GetWidth(m_text.c_str());
         text_height = font->GetHeight();
     }
+   
 
       m_bounds = Rectangle(GetRealX(),GetRealY(), m_size.x+1, m_size.y+1);
-//get mouse 
 
-        int mouseX, mouseY;
-        Uint32 mouseState = SDL_GetMouseState(&mouseX, &mouseY);
-
-        if (mouseState & SDL_BUTTON(SDL_BUTTON_LEFT)) 
-        {
-
-                if (m_bounds.Contains(mouseX, mouseY))
-                {
-                    m_down = true;
-                    if (OnDown)
-                        OnDown();
-
-                         
-                }
-                else
-                {
-                    m_down = false;
-                }
-               
-        }
-  
-
+      
   
 }
 
@@ -577,7 +634,7 @@ void Button::OnMouseMove(int x, int y)
 
 void Button::OnMouseDown(int x, int y, int button)
 {
-    (void)button;
+    if (button == 1)
     if (m_bounds.Contains(x, y))
     {
         m_down = true;
@@ -588,11 +645,34 @@ void Button::OnMouseDown(int x, int y, int button)
 
 void Button::OnMouseUp(int x, int y, int button)
 {
-    (void)button;
+    if (button == 1)
     if (m_bounds.Contains(x, y))
     {
         m_down = false;
         if (OnClick)
             OnClick();
     }
+}
+
+void Button::OnKeyDown(Uint32 key)
+{
+        if (iskeyMappped && m_gui!=nullptr)  
+        if (key == m_key && !m_down)
+        {
+            m_down = true;
+            if (OnDown)
+                OnDown();
+        }
+
+}
+
+void Button::OnKeyUp(Uint32 key)
+{
+        if (iskeyMappped && m_gui!=nullptr)  
+        if (key == m_key && m_down)
+        {
+            m_down = false;
+            if (OnClick)
+                OnClick();
+        }
 }

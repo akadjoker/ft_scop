@@ -34,6 +34,7 @@ struct Color
     static  const Color SILVER;
     static  const Color BRONZE;
     static  const Color SKYBLUE;
+    static const  Color ShadesOfGray ;
 
 
     Color()

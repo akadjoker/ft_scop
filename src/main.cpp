@@ -13,230 +13,11 @@ constexpr float ROTATE_SPEED = 5.0f;
 constexpr float MOVE_SPEED = 5.0f;
 
 
-struct mtl_t 
-{
-			Vector3 Ka;
-			Vector3 Kd;
-			Vector3 Ks;
-			float Km;
-			float Ni;
-			float Ns;
-			float d;
-
-			std::string Name;
-			std::string TexturePath;
-};
-
-
-
-struct Importer
-{
-    bool Load(const std::string &fname)
-    {
-
-            File file(fname, "rb");
-            if (!file.IsOpen()) 
-            {
-                Log(2,"Error reading OBJ data");    
-                return false;
-            }
-            int size = file.Size();
-             std::vector<char> data;
-			 data.resize(size);
-             file.Read(&data[0], size);
-			 const char* fileDataConst = (const char*)&data[0];
-             file.Close();
-
-
-            // std::ifstream infile;
-			// infile.open(fname, std::ifstream::binary);
-
-			// if (!infile.is_open()) 
-            // {
-			// 	std::cout << "Obj::FromFile() failed! Could not open file named: " << fname << std::endl;
-			// 	infile.close();
-			// 	return false;
-			// }
-
-			// infile.seekg(0, std::ios::end);
-			// size_t file_size_in_byte = (size_t)infile.tellg();
-
-			// std::vector<char> data;
-			// data.resize(file_size_in_byte);
-			// infile.seekg(0, std::ios::beg);
-
-			// infile.read(&data[0], file_size_in_byte);
-
-			// const char* fileDataConst = (const char*)&data[0];
-
-			return Read(fileDataConst);
-
-			//infile.close();
-            
-
-    }
-
-    bool Read(const char* buffer)
-    {
-        std::cout<<"Read"<<std::endl;
-       	std::string curline;
-			int i = -1;
-			int texid = 0;
-			int normalid = 0;
-
-			std::vector<Vector3> vertices;
-			std::vector<Vector3> normals;
-			std::vector<Vector2> texposs;
-
-			while (buffer[++i] != 0) 
-            {
-				char l = buffer[i];
-
-				if ((l == '\n' || l == '\r') && curline.size() > 0) 
-                {
-					auto parts = Split(curline, ' ');
-
-					if (parts[0] == "v") 
-                    {
-						vertices.push_back(Vector3((float)atof(parts[1].c_str()), (float)atof(parts[2].c_str()), (float)atof(parts[3].c_str())));
-					} else if (parts[0] == "vt") 
-                    {
-						texposs.push_back(Vector2((float)atof(parts[1].c_str()), (float)atof(parts[2].c_str())));
-					} else if (parts[0] == "vn") 
-                    {
-						normals.push_back(Vector3((float)atof(parts[1].c_str()), (float)atof(parts[2].c_str()), (float)atof(parts[3].c_str())));
-					} else if (parts[0] == "f") 
-                    {
-						if (parts.size() == 4) 
-                        {
-                             // triangle
-                             Log(0,"Triangle");
-					 		add_triangle( vertices, normals, texposs, parts[1], parts[2], parts[3]);
-
-						} else if (parts.size() == 5) 
-                        { 
-                            Log(0,"Quad");
-                            // quad
-					   		add_triangle( vertices, normals, texposs, parts[1], parts[2], parts[3]);
-							add_triangle( vertices, normals, texposs, parts[1], parts[3], parts[4]);
-						} else 
-                        {
-							
-							Log(2," Invalid face count while loading model");
-                            return false;
-						}
-					} else if (parts[0] == "usemtl") 
-                    {
-						Mtl = parts[1];
-                        Log(0,"usemtl %s",Mtl.c_str());
-					} else if (parts[0] == "g") 
-                    {
-						if (Group != "") 
-                        {
-                            Log(0,"New Group");
-							//this->Meshes.Add(m);
-							//m = ObjMesh();
-						}
-
-						Group = parts[1];
-					}
-
-					curline = "";
-				}
-
-				if (l != '\n' && l != '\r') curline += l;
-			}
-
-			//if (m.Vertices.Count > 0) this->Meshes.Add(m);
-        
-        return true;
-    }
-    void   add_triangle(const std::vector<Vector3>& vertices, const std::vector<Vector3>& normals, const std::vector<Vector2>& texposs, const std::string& a, const std::string& b, const std::string& c) 
-    {
-			auto data_a = Split(a, '/');
-			auto data_b = Split(b, '/');
-			auto data_c = Split(c, '/');
-
-			Vertex v_a;
-			Vertex v_b;
-			Vertex v_c;
-
-			// vertice ID is always filled in
-			// -1 due not zero-indexed array but one-indexed
-			int vertID_a = atoi(data_a[0].c_str()) - 1;
-			int vertID_b = atoi(data_b[0].c_str()) - 1;
-			int vertID_c = atoi(data_c[0].c_str()) - 1;
-
-			// fix negative offset
-			if (vertID_a < 0) vertID_a += vertices.size() + 1;
-			if (vertID_b < 0) vertID_b += vertices.size() + 1;
-			if (vertID_c < 0) vertID_c += vertices.size() + 1;
-
-			v_a.position = vertices[vertID_a];
-			v_b.position = vertices[vertID_b];
-			v_c.position = vertices[vertID_c];
-
-			// UV
-			if (data_a.size() > 1 && data_a[1].size() > 0)
-             {
-				int texID_a = atoi(data_a[1].c_str()) - 1;
-				int texID_b = atoi(data_b[1].c_str()) - 1;
-				int texID_c = atoi(data_c[1].c_str()) - 1;
-
-				if (texID_a < 0) texID_a += texposs.size() + 1;
-				if (texID_b < 0) texID_b += texposs.size() + 1;
-				if (texID_c < 0) texID_c += texposs.size() + 1;
-
-				v_a.texcoord = texposs[texID_a];
-				v_b.texcoord = texposs[texID_b];
-				v_c.texcoord = texposs[texID_c];
-			}
-
-			// normals
-			if (data_a.size() > 2 && data_a[2].size() > 0) 
-            {
-				int normID_a = atoi(data_a[2].c_str()) - 1;
-				int normID_b = atoi(data_b[2].c_str()) - 1;
-				int normID_c = atoi(data_c[2].c_str()) - 1;
-
-				if (normID_a < 0) normID_a += normals.size() + 1;
-				if (normID_b < 0) normID_b += normals.size() + 1;
-				if (normID_c < 0) normID_c += normals.size() + 1;
-
-			}
-
-
-			Vertices.push_back(v_a);
-			Indices.push_back(Vertices.size() - 1);
-
-			Vertices.push_back(v_b);
-			Indices.push_back(Vertices.size() - 1);
-
-			Vertices.push_back(v_c);
-			Indices.push_back(Vertices.size() - 1);
-		}
-
-    std::vector<Vertex> Vertices;
-	std::vector<Uint16> Indices;
-    std::string Mtl;
-	std::string Group;
-}  ;
 
 
 
 int main()
 {
-
-//     Importer importer;
-//     importer.Load("resources/42.obj");
-
-// //     // Font f;
-// //     // f.Load("resources/font1.fnt");
-
-// //     Texture t;
-// //     t.Load("resources/GameTutorials_24.tga");
-
-//  return 0;
 
 
 
@@ -269,7 +50,7 @@ int main()
     SDL_Window* window = SDL_CreateWindow("scop", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH, SCREEN_HEIGHT,  SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
     if (!window) 
     {
-        Log(2, "Erro ao criar a janela %s " , SDL_GetError() );
+        Log(2, "Error creating window%s " , SDL_GetError() );
         SDL_Quit();
         return -1;
     }
@@ -278,7 +59,7 @@ int main()
     SDL_GLContext glContext = SDL_GL_CreateContext(window);
     if (!glContext) 
     {
-        Log(2,  "Erro ao criar o contexto OpenGL %s ",SDL_GetError() );
+        Log(2,  "Erro creating  OpenGL  context %s ",SDL_GetError() );
         SDL_DestroyWindow(window);
         SDL_Quit();
         return -1;
@@ -315,7 +96,7 @@ int main()
 
     GUI widgets;
 
-    Window *window1 = widgets.CreateWindow("Options", 100, 100, 300, 350);
+    Window *window1 = widgets.CreateWindow("Mesh Transform", 10, SCREEN_HEIGHT- 360, 300, 350);
 
     window1->CreateLabel("yaw",   10, 30);
     window1->CreateLabel("pitch", 10, 74);
@@ -325,19 +106,34 @@ int main()
     Slider *sliderPitch = window1->CreateSlider(false, 10, 90, 200, 20, 0, 360, 0);
     Slider *sliderRoll  = window1->CreateSlider(false, 10, 130, 200, 20, 0, 360, 0);
 
-    Slider *colorLerp = window1->CreateSlider(false, 10, 300, 200, 20, 0, 1, 0.5);
+    Slider *colorLerp = window1->CreateSlider(false, 10, 300, 160, 20, 0, 1, 0.5);
+    Button *buttonLerp = window1->CreateButton("Swicth", 200, 300, 80, 20);
+    buttonLerp->SetkeyMap(true,SDLK_t);
 
     Button *moveLeft = window1->CreateButton("move - x", 10, 170, 100, 20);
+    moveLeft->SetkeyMap(true,SDLK_LEFT);
     Button *moveRight = window1->CreateButton("move + x", 120, 170, 100, 20);
+    moveRight->SetkeyMap(true,SDLK_RIGHT);
     
     Button *moveUp = window1->CreateButton("move - y", 10, 200, 100, 20);
+    moveUp->SetkeyMap(true,SDLK_UP);
     Button *moveDown = window1->CreateButton("move + y", 120, 200, 100, 20);
+    moveDown->SetkeyMap(true,SDLK_DOWN);
 
     Button *moveFront = window1->CreateButton("move - z", 10, 230, 100, 20);
+    moveFront->SetkeyMap(true,SDLK_PAGEUP);
     Button *moveBack = window1->CreateButton("move + z", 120, 230, 100, 20);
+    moveBack->SetkeyMap(true,SDLK_PAGEDOWN);
 
     Button *reset = window1->CreateButton("reset", 50, 260, 100, 20);
     
+    Window *window2 = widgets.CreateWindow("Mesh Tool", SCREEN_WIDTH-160, 24, 150, 180);
+
+    Button *buttonUv= window2->CreateButton("Uv", 10, 50, 100, 20);
+    Slider *sliderUv = window2->CreateSlider(false, 10, 20, 100, 20, 0.01f, 5.0f, 1.0f);
+
+    Button *buttonCenter= window2->CreateButton("Center Mesh", 10, 100, 100, 20);
+    Button *buttonShades= window2->CreateButton("Shades/Gray", 10, 130, 100, 20);
 
 
     
@@ -356,7 +152,11 @@ int main()
     float rotPitch = 0;
     float rotRoll = 0;
     Vector3 position = Vector3(0,1,0);
+    float uvForce = 1.0f;
     bool isKeyShift = false;
+    int BlendState=2;
+    int lastBlendState=0;
+    float blndAnimation = 0.0f;
 
     bool quit = false;
     while (!quit) 
@@ -477,12 +277,13 @@ int main()
                 
                 case SDL_KEYUP:
                 {
-                    
+                    widgets.OnKeyUp(event.key.keysym.sym);    
                     break;
                 }
             
                 case SDL_KEYDOWN:
                 {
+                    widgets.OnKeyDown(event.key.keysym.sym);
                     if (event.key.keysym.sym == SDLK_ESCAPE)      quit = true;
                     
                     break;  
@@ -502,6 +303,19 @@ int main()
     {
         
         model->Setlerp(value);   
+    };
+    buttonLerp->OnClick = [&]()
+    {
+        Log(0,"Switch");
+        if (blndAnimation<=0.0f)
+        {
+            BlendState=0;
+            blndAnimation = 0.0f;
+        } else 
+        {
+            BlendState=1;
+            blndAnimation = 1.0f;
+        }
     };
 
 
@@ -554,6 +368,69 @@ int main()
         sliderPitch->SetValue(0);
         sliderRoll->SetValue(0);
     };
+
+    //mesh tool
+    buttonUv->OnClick = [&]()
+    {
+        model->MakePlanarMapping(uvForce);
+    };
+    sliderUv->OnValueChanged = [&](float value)
+    {
+        uvForce = value;
+    };
+    buttonCenter->OnClick = [&]()
+    {
+        model->Center();
+    };
+
+    buttonShades->OnClick = [&]()
+    {
+        model->ShadesOfGray();
+    };
+
+        switch (BlendState)
+        {
+            case 0:
+            {
+                
+                blndAnimation += 0.2f * deltaTime;
+                if (blndAnimation > 1.0f) 
+                {
+                    blndAnimation = 1.0f;
+                    lastBlendState = 0;
+                    BlendState=2;
+                }
+              //  model->Setlerp(blndAnimation);
+                colorLerp->SetValue(blndAnimation);
+              //  Log(0,"blndAnimation %f",blndAnimation);
+                break;
+            }
+            case 1:
+            {
+                
+                blndAnimation -= 0.2f * deltaTime;
+                
+                if (blndAnimation < 0.0f) 
+                {
+                    lastBlendState = 1;
+                    blndAnimation = 0.0f;
+                    BlendState=2;
+                }
+             //   model->Setlerp(blndAnimation);
+                colorLerp->SetValue(blndAnimation);
+             //   Log(0,"blndAnimation %f",blndAnimation);
+                break;
+            }
+            case 2:
+            {
+                
+                //do nothing
+            
+                break;
+            }
+        }
+
+    
 
         if (state[SDL_SCANCODE_Q])      
             rotYaw  += ROTATE_SPEED *  deltaTime;

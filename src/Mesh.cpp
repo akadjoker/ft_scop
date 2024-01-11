@@ -417,7 +417,8 @@ bool Mesh::Load(const std::string &filename)
 					auto parts = Split(curline, ' ');
 
 					if (parts[0] == "v")
-                    {
+                    { 
+                        
                        
                        //   std::cout<<"x:"<<parts[1]<<" y:"<<parts[2].c_str()<<" z:"<<parts[3].c_str()<<std::endl;
 
@@ -476,7 +477,7 @@ bool Mesh::Load(const std::string &filename)
 				if (l != '\n' && l != '\r') curline += l;
 			}
 
-        Build (!haveNormals, !haveTexCoords);
+        Build ();
         return true;
     }
    
@@ -662,12 +663,65 @@ void Mesh::Build()
 {
     for (auto surface : m_surfaces)
     {
-     //   surface->CalculateNormals();
+        surface->CalculateNormals();
      //   surface->Center();
      //   surface->MakePlanarMapping(1.0f);
         surface->Build();
     }
 }
+
+
+void Mesh::MakePlanarMapping(float value)
+{
+    for (auto surface : m_surfaces)
+    {
+        surface->MakePlanarMapping(value);
+        surface->Build();
+    }
+}
+
+void Mesh::Center()
+{
+    for (auto surface : m_surfaces)
+    {
+        surface->Center();
+        surface->Build();
+    }
+}
+
+void Mesh::ShadesOfGray()
+{
+    for (auto surface : m_surfaces)
+    {
+    
+        for (auto& vertex : surface->m_vertices)
+        {
+            Vector3 normal = vertex.normal;
+            Color  color = vertex.color;
+
+           
+            if ( (normal.z == 1.0f || normal.z==-1.0f) && normal.y <= 0.5f && normal.x <= 0.5f )
+            {
+                 vertex.color=Color::ShadesOfGray;
+            } 
+            else
+            {
+
+
+                float variation = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 1.0f; 
+
+                vertex.color.r = variation;
+                vertex.color.g = variation;
+                vertex.color.b = variation;
+
+            }
+
+        }
+        surface->Build();
+    }
+}
+
+
 
 void Mesh::Build(bool generateNormals, bool generateTexcoords)
 {

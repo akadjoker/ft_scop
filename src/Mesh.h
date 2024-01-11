@@ -200,6 +200,13 @@ public:
     Mesh();
     ~Mesh();
 
+    void MakePlanarMapping(float value);
+    void Center();
+    void ShadesOfGray();
+    
+
+
+
 
     void Build();
     void Build(bool generateNormals, bool generateTexcoords);
