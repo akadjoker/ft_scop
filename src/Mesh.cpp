@@ -364,6 +364,12 @@ bool Mesh::Load(const std::string &filename)
             return false;
         }
         int size = file.Size();
+        if (size <= 1)
+        {
+            Log(2,"Error reading OBJ(%s) data",filename.c_str());
+            file.Close();
+            return false;
+        }
         std::vector<char> data;
         data.resize(size);
         file.Read(&data[0], size);
@@ -372,6 +378,8 @@ bool Mesh::Load(const std::string &filename)
 
         Group = "";
         Mtl = "";
+
+   
 
         bool status = Read(fileDataConst);
         if (!status)
@@ -389,7 +397,8 @@ bool Mesh::Load(const std::string &filename)
     bool Mesh::Read(const char* buffer)
     {
 
-
+        try 
+        {
 
        	    std::string curline;
 			int i = -1;
@@ -405,6 +414,8 @@ bool Mesh::Load(const std::string &filename)
 
             Surface *surface = addSurface(0);
 
+            
+
 			while (buffer[++i] != 0)
             {
 				char l = buffer[i];
@@ -412,6 +423,8 @@ bool Mesh::Load(const std::string &filename)
 				if ((l == '\n' || l == '\r') && curline.size() > 0)
                 {
 					auto parts = Split(curline, ' ');
+                    if (parts.size()<=1) continue;
+                    Log(0,"count : %d",parts.size());
 
 					if (parts[0] == "v")
                     { 
@@ -456,12 +469,13 @@ bool Mesh::Load(const std::string &filename)
 					} else if (parts[0] == "usemtl")
                     {
 						Mtl = parts[1];
-                        Log(0,"usemtl %s",Mtl.c_str());
+                        //Log(0,"usemtl %s",Mtl.c_str());
 					} else if (parts[0] == "g")
                     {
 						if (Group != "")
                         {
-                            Log(0,"New Group");
+                           // Log(0,"New Group");
+
                             surface = addSurface(0);
 						}
 
@@ -476,7 +490,17 @@ bool Mesh::Load(const std::string &filename)
 
         Build ();
         return true;
+        }
+        
+        catch (const std::exception &e)
+        {
+            
+            Log(2, "Ups  %s", e.what());
+            
+            return false;
+        }
     }
+
    
     void Mesh::add_polygon(Surface *surf, const std::vector<Vector3>& vertices, const std::vector<Vector3>& normals, const std::vector<Vector2>& texposs, const std::vector<std::string>& polygonVertices)
     {
