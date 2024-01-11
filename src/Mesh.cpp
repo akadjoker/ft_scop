@@ -422,9 +422,10 @@ bool Mesh::Load(const std::string &filename)
 
 				if ((l == '\n' || l == '\r') && curline.size() > 0)
                 {
+                    
 					auto parts = Split(curline, ' ');
-                    if (parts.size()<=1) continue;
-                    Log(0,"count : %d",parts.size());
+                  //  if (parts.size()<=1) continue;
+                  //  Log(0, "OBJ: %s", curline.c_str());
 
 					if (parts[0] == "v")
                     { 
