@@ -420,33 +420,7 @@ bool Mesh::Load(const std::string &filename)
 
 }
 
-static bool IsNumber(const std::string& s)
-{
-    try
-    {
-        size_t pos;
-        std::stod(s, &pos);
-        return pos == s.size();
-    }
-    catch (const std::exception&)
-    {
-        return false;
-    }
-}
 
-
-
-// static bool hasNumberBetweenSlashes(const std::string &input)
-// {
-//     size_t firstSlash = input.find("//");
-//     return (firstSlash == std::string::npos);
-// }
-
-// static bool hasNumberAfterLastSlash(const std::string &input)
-// {
-//     size_t lastSlash = input.find_last_of('/');
-//     return (lastSlash != std::string::npos && lastSlash < input.size() - 1 && std::isdigit(input[lastSlash + 1]));
-// }
 
 
 //this code contain protection because off some stupid students that 
@@ -557,9 +531,9 @@ static bool IsNumber(const std::string& s)
 				if (l != '\n' && l != '\r') curline += l;
 			}
 
-        if (surface->m_vertices.size() == 0)
+        if (surface->m_vertices.size() == 0 || surface->m_indices.size() == 0)
         {
-            Log(1,"No vertices found");
+            Log(2,"No vertices found");
             return false;
         }
 

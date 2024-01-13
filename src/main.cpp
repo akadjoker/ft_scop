@@ -51,9 +51,31 @@ bool LoadMesh(const char *filename)
     return state;
 }
 
-
-int main()
+bool directoryExists(const std::string &path) 
 {
+    struct stat info;
+    if (stat(path.c_str(), &info) != 0) {
+        return false;
+    }
+    return (info.st_mode & S_IFDIR) != 0;
+}
+
+int main(int argc, char *argv[])
+{
+    Log(0,"scop by lrosa-do");
+    Log(0,"Version 0.1");
+    (void)argc;
+    std::string path = GetFilePath(argv[0]);
+    std::string resources =  path + "resources";
+    if (directoryExists(resources))
+    {
+        Log(0,"Resources path: %s",resources.c_str());
+    }
+    else
+    {
+        Log(2,"Resources path not found: %s",resources.c_str());
+        return 1;
+    }
 
 
 
@@ -126,7 +148,7 @@ int main()
     //model = new Mesh();
 
     model = new Mesh();
-    model->Load("resources/plane.obj");
+    model->Load("resources/42.obj");
     model->Build();
 
 

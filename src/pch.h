@@ -10,6 +10,7 @@
 #include <future>
 #include <algorithm> 
 #include <cctype>  
+#include <sys/stat.h>
 #include <SDL2/SDL.h>
 // #include <SDL2/SDL_thread.h>
 // #include <SDL2/SDL_mutex.h>
