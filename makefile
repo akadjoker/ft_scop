@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -std=c++11 -Wall -Wextra -Werror -fsanitize=undefined -fno-omit-frame-pointer -g
+CXXFLAGS = -std=c++11 -Wall -Wextra  -fsanitize=undefined -fno-omit-frame-pointer -g
 LIBS =  -lSDL2 -lGL
 
 SRCDIR = src

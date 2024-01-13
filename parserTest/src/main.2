@@ -1,0 +1,100 @@
+// Online C++ compiler to run C++ program online
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <iostream>
+#include <vector>
+#include <map>
+#include <unordered_map>
+#include <functional>
+#include <future>
+#include <algorithm> 
+#include <cctype>  
+
+bool containsNumber(const std::string &s)
+{
+    return !s.empty() && std::all_of(s.begin(), s.end(), ::isdigit);
+}
+
+void analyzeFormat(const std::vector<std::string> &components, bool &hasVertex, bool &hasUV, bool &hasNormal)
+{
+    
+ hasVertex = !components.empty() && !components[0].empty();
+    hasUV = components.size() > 1 && !components[1].empty();
+    hasNormal = components.size() > 2 && !components[2].empty();
+}
+
+std::vector<std::string> Split(const std::string &s, char delimiter) 
+{
+   std::vector<std::string> tokens;
+    std::istringstream tokenStream(s);
+    std::string token;
+    
+    while (std::getline(tokenStream, token, delimiter))
+    {
+            if (token == "") continue;
+            tokens.push_back(token);
+        
+    }
+    
+    return tokens;
+}
+
+int main() 
+{
+    {
+        std::string string ="1/1/1";
+        std::vector<std::string> strings = Split(string, '/');
+        size_t count = strings.size();
+        std::cout << "COUNT:" << count << "\n";
+        for (size_t i = 0; i < count; i++)
+        {
+            std::cout << strings[i]  << ")\n";
+        }
+         bool asVertex, asUV, asNormal;
+        analyzeFormat(strings, asVertex, asUV, asNormal);
+
+        std::cout << "asVertex: " << asVertex << "\n";
+        std::cout << "asUV: " << asUV << "\n";
+        std::cout << "asNormal: " << asNormal << "\n";
+        std::cout << "-----------------------------------------------" << "\n";
+    }
+
+    {
+        std::string string ="1//1";
+        std::vector<std::string> strings = Split(string, '/');
+        size_t count = strings.size();
+        std::cout << "COUNT:" << count << "\n";
+        for (size_t i = 0; i < count; i++)
+        {
+            std::cout << strings[i]  << ")\n";
+        }
+         bool asVertex, asUV, asNormal;
+        analyzeFormat(strings, asVertex, asUV, asNormal);
+
+        std::cout << "asVertex: " << asVertex << "\n";
+        std::cout << "asUV: " << asUV << "\n";
+        std::cout << "asNormal: " << asNormal << "\n";
+        std::cout << "-----------------------------------------------" << "\n";
+    }
+
+    {
+        std::string string ="1/1/";
+        std::vector<std::string> strings = Split(string, '/');
+        size_t count = strings.size();
+        std::cout << "COUNT:" << count << "\n";
+        for (size_t i = 0; i < count; i++)
+        {
+            std::cout << strings[i]  << ")\n";
+        }
+         bool asVertex, asUV, asNormal;
+        analyzeFormat(strings, asVertex, asUV, asNormal);
+
+        std::cout << "asVertex: " << asVertex << "\n";
+        std::cout << "asUV: " << asUV << "\n";
+        std::cout << "asNormal: " << asNormal << "\n";
+        std::cout << "-----------------------------------------------" << "\n";
+    }
+
+    return 0;
+}

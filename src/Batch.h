@@ -91,6 +91,11 @@ struct RenderBatch
       void DrawLine3D(float x1, float y1, float z1, float x2, float y2, float z2, const Color &color);
       void DrawGrid(int slices, float spacing);
 
+      void Set2D();
+      void Set3D();
+
+      
+
    
 
     void DrawTexture(Texture *texture, float x, float y,float width, float height, const Rectangle &clip, const Color &color);

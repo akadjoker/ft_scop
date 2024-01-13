@@ -152,6 +152,8 @@ struct BoundingBox
         
 };
 
+
+
 class Surface
 {
     friend class Mesh;
@@ -169,10 +171,12 @@ class Surface
         int AddIndex(Uint32 index);
         int AddFace(Uint32 a, Uint32 b, Uint32 c);
 
-        void Center();
-        void MakePlanarMapping(float resolution = 1.0f);
+        bool Center();
+        bool MakePlanarMapping(float resolution = 1.0f);
+        bool CalculateNormals();
 
-        void CalculateNormals();
+        Surface& operator=(const Surface& surface) = delete;
+        Surface(const Surface& surface) = delete;
 
     private:
         std::vector<Vertex> m_vertices;
@@ -182,6 +186,8 @@ class Surface
         bool m_containsNormals;
         bool m_containsTexcoords;
         bool m_containsColors;
+        bool m_isCentered;
+
         struct Buffer
         {
             GLuint vao;
@@ -211,6 +217,7 @@ public:
     void Build();
     void Build(bool generateNormals, bool generateTexcoords);
     bool Load(const std::string& filename);
+    bool Import (const std::string& filename);
     void Render();
 
     void Clear();
@@ -222,9 +229,14 @@ public:
     void Setlerp(float lerp);
 
     static Mesh *CreateCube(const Vector3 &size);
+    void BuildCube(const Vector3 &size);
 
     Material* addMaterial();
     Surface*  addSurface(int materialIndex);
+
+    Mesh& operator=(const Mesh& mesh) = delete;
+    Mesh(const Mesh& mesh) = delete;
+
 
 private:
     

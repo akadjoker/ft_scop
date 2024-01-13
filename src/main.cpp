@@ -4,16 +4,52 @@
 #include "scop.h"
 #include "Camera.h"
 
-constexpr int SCREEN_WIDTH = 1024;
-constexpr int SCREEN_HEIGHT = 720;
-constexpr float ZOOM_SPEED = 5.0f;
+ int SCREEN_WIDTH = 1024;
+ int SCREEN_HEIGHT = 720;
+constexpr float ZOOM_SPEED = 1.0f;
 constexpr float YAW_SPEED = 0.5f;
 constexpr float PITCH_SPEED = 0.6f;
 constexpr float ROTATE_SPEED = 5.0f;
 constexpr float MOVE_SPEED = 5.0f;
 
+constexpr float LOAD_ANIM_SPEED = 5.0f;
 
+std::string meshToLoad;
+Mesh *model = nullptr;
+int  GameState =0;
 
+std::mutex s_mutex;  
+bool LoadMesh(const char *filename)
+{
+    bool state = false;
+
+    Log(1,"LoadMesh %s",filename);
+    std::lock_guard<std::mutex> guard(s_mutex);
+
+    try 
+    {
+        if (model)
+        {
+          
+            Log(1,"Create mesh");
+
+            state = model->Load(filename);
+        }
+    }
+    catch (const std::exception& e) 
+    {
+        Log(2,"LoadMesh error %s",e.what());
+        state = false;
+    }
+    catch (...) 
+    {
+        Log(2,"LoadMesh error");
+        state = false;
+    }
+    Log(1,"LoadMesh done");
+
+    return state;
+}
 
 
 int main()
@@ -89,8 +125,10 @@ int main()
     //Mesh *model = Mesh::CreateCube(Vector3(1,1,1));
     //model = new Mesh();
 
-    Mesh *model = new Mesh();
-    model->Load("resources/42.obj");
+    model = new Mesh();
+    model->Load("resources/plane.obj");
+    model->Build();
+
 
     Font font;
 
@@ -127,13 +165,14 @@ int main()
 
     Button *reset = window1->CreateButton("reset", 50, 260, 100, 20);
     
-    Window *window2 = widgets.CreateWindow("Mesh Tool", SCREEN_WIDTH-160, 24, 150, 180);
+    Window *window2 = widgets.CreateWindow("Mesh Tool", SCREEN_WIDTH-160, 24, 150, 190);
 
     Button *buttonUv= window2->CreateButton("Uv", 10, 50, 100, 20);
     Slider *sliderUv = window2->CreateSlider(false, 10, 20, 100, 20, 0.01f, 5.0f, 1.0f);
 
     Button *buttonCenter= window2->CreateButton("Center Mesh", 10, 100, 100, 20);
     Button *buttonShades= window2->CreateButton("Shades/Gray", 10, 130, 100, 20);
+    CheckBox *backFaces = window2->CreateCheckBox("Back Faces", true, 10, 160, 20, 20);
 
 
     
@@ -157,6 +196,13 @@ int main()
     int BlendState=2;
     
     float blndAnimation = 0.0f;
+
+    //load animation
+    float   loadSpeed = 0;
+    int     loadFrame = 0;
+
+    std::future<bool> isLoadMesh;
+    // mutex = SDL_CreateMutex();
 
     bool quit = false;
     while (!quit) 
@@ -199,8 +245,13 @@ int main()
                     Log(0,"File path: %s",path.c_str());
                     if (extension == "obj")
                     {
+                        
+                        meshToLoad = dropped_filedir;
                         model->Clear();
-                        model->Load(dropped_filedir);
+                        isLoadMesh = std::async(std::launch::async, LoadMesh,  meshToLoad.c_str()); 
+                        GameState=1;
+
+                       
                     }
                     else if (extension == "tga")
                     {
@@ -228,6 +279,8 @@ int main()
                     {
                         int w = event.window.data1;
                         int h = event.window.data2;
+                        SCREEN_WIDTH = w;
+                        SCREEN_HEIGHT = h;
                         glViewport(0, 0, w, h);
                         projection2D.Ortho(0, w, h, 0, 0, 1000);
                         batch2D.SetMatrix(projection2D);
@@ -297,217 +350,311 @@ int main()
         glClearColor(0.1f, 0.1f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        glEnable(GL_DEPTH_TEST);
-
-    colorLerp->OnValueChanged = [&](float value)
-    {
-        
-        model->Setlerp(value);   
-    };
-    buttonLerp->OnClick = [&]()
-    {
-        Log(0,"Switch");
-        if (blndAnimation<=0.0f)
-        {
-            BlendState=0;
-            blndAnimation = 0.0f;
-        } else 
-        {
-            BlendState=1;
-            blndAnimation = 1.0f;
-        }
-    };
-
-
-    sliderYaw->OnValueChanged = [&](float value) 
-    {
-        rotYaw =  toRadians(value);
-    };
-    sliderPitch->OnValueChanged = [&](float value)
-    {
-        rotPitch =  toRadians(value);
-    };
-    sliderRoll->OnValueChanged = [&](float value)
-    {
-        rotRoll =  toRadians(value);
-    };
-    moveLeft->OnDown = [&]()
-    {
-        position.x -= MOVE_SPEED * deltaTime;
-    };
-    moveRight->OnDown = [&]()
-    {
-        position.x += MOVE_SPEED * deltaTime;
-    };
-
-    moveUp->OnDown = [&]()
-    {
-        position.y -= MOVE_SPEED * deltaTime;
-    };
-    moveDown->OnDown = [&]()
-    {
-        position.y += MOVE_SPEED * deltaTime;
-    };
-
-    moveFront->OnDown = [&]()
-    {
-        position.z -= MOVE_SPEED * deltaTime;
-    };
-    moveBack->OnDown = [&]()
-    {
-        position.z += MOVE_SPEED * deltaTime;
-    };
-
-    reset->OnClick = [&]()
-    {
-        rotYaw = 0;
-        rotPitch = 0;
-        rotRoll = 0;
-        position = Vector3(0,1,0);
-        sliderYaw->SetValue(0);
-        sliderPitch->SetValue(0);
-        sliderRoll->SetValue(0);
-    };
-
-    //mesh tool
-    buttonUv->OnClick = [&]()
-    {
-        model->MakePlanarMapping(uvForce);
-    };
-    sliderUv->OnValueChanged = [&](float value)
-    {
-        uvForce = value;
-    };
-    buttonCenter->OnClick = [&]()
-    {
-        model->Center();
-    };
-
-    buttonShades->OnClick = [&]()
-    {
-        model->ShadesOfGray();
-    };
-
-        switch (BlendState)
-        {
-            case 0:
-            {
-                
-                blndAnimation += 0.2f * deltaTime;
-                if (blndAnimation > 1.0f) 
-                {
-                    blndAnimation = 1.0f;
-                    
-                    BlendState=2;
-                }
-              //  model->Setlerp(blndAnimation);
-                colorLerp->SetValue(blndAnimation);
-              //  Log(0,"blndAnimation %f",blndAnimation);
-                break;
-            }
-            case 1:
-            {
-                
-                blndAnimation -= 0.2f * deltaTime;
-                
-                if (blndAnimation < 0.0f) 
-                {
-                    
-                    blndAnimation = 0.0f;
-                    BlendState=2;
-                }
-             //   model->Setlerp(blndAnimation);
-                colorLerp->SetValue(blndAnimation);
-             //   Log(0,"blndAnimation %f",blndAnimation);
-                break;
-            }
-            case 2:
-            {
-                
-                //do nothing
-            
-                break;
-            }
-        }
-
-    
-
-        if (state[SDL_SCANCODE_Q])      
-            rotYaw  += ROTATE_SPEED *  deltaTime;
-        else if (state[SDL_SCANCODE_E])
-            rotYaw -= ROTATE_SPEED *  deltaTime;
-
-        if (state[SDL_SCANCODE_W])
-            rotPitch += ROTATE_SPEED *  deltaTime;
-        else if (state[SDL_SCANCODE_S])
-            rotPitch -= ROTATE_SPEED *  deltaTime;
-
-        if (state[SDL_SCANCODE_A])
-            rotRoll += ROTATE_SPEED *  deltaTime;
-        else if (state[SDL_SCANCODE_D])
-            rotRoll -= ROTATE_SPEED *  deltaTime;
-
-
-
-        //3d stuff
- 
-        camera.Update();
-        
-        Matrix modelTraslate;
-        modelTraslate.Translate(position);
-
-        Matrix modelScale;
-        modelScale.Scale(1,1,1);
- 
-        Quaternion rotate;
-        rotate.FromEuler(rotPitch,rotYaw,rotRoll);
-
-        
-
-        Matrix modelRotate;
-        modelRotate.Rotate(rotate);
-
-        //order is important
-        Matrix modelTrasform = modelTraslate * modelScale * modelRotate;
-        Matrix trasform = projection3D * camera.matrix * modelTrasform;
-        model->SetMatrix(trasform);
-
-
-        Matrix mvp = projection3D * camera.matrix;
-        batch3D.SetMatrix(mvp);
-        texture->Bind();
-        model->Render();
-
-
-        batch3D.DrawGrid(10,10);
-        batch3D.SetMatrix(mvp);
-        batch3D.Render();
-
-        //2d stuff
-        glDisable(GL_DEPTH_TEST);    
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        // batch2D.DrawLine(5,5,100,100,Color(0,1,0,1));
-        
-
-
-
-
-       batch2D.DrawRectangle(20,18,210,20,Color(0.0,0.0,0.0,1),true);
-       batch2D.DrawRectangle(20,18,210,20,Color(1,1,1,1),false);
-     //  batch2D.DrawRectangle(20,180,210,20,Color(1.0,1.0,1.0,1),true);
-       
-
-       font.DrawText(&batch2D, "Luis Santos", Vector2(200, 400),  Color(1, 1, 1, 1));
-       font.DrawText(&batch2D, 20,20, Color(1, 1, 1, 1), "Fps:%f DeltaTime:%f",fps,deltaTime);
-
-
-        widgets.Update(deltaTime);
-        widgets.Render(&batch2D);
      
-   
-        batch2D.Render();
-        glDisable(GL_BLEND);
+        if (GameState==0)
+        {
+
+            colorLerp->OnValueChanged = [&](float value)
+            {
+                
+                model->Setlerp(value);   
+            };
+            buttonLerp->OnClick = [&]()
+            {
+                Log(0,"Switch");
+                if (blndAnimation<=0.0f)
+                {
+                    BlendState=0;
+                    blndAnimation = 0.0f;
+                } else 
+                {
+                    BlendState=1;
+                    blndAnimation = 1.0f;
+                }
+            };
+
+
+            sliderYaw->OnValueChanged = [&](float value) 
+            {
+                rotYaw =  toRadians(value);
+            };
+            sliderPitch->OnValueChanged = [&](float value)
+            {
+                rotPitch =  toRadians(value);
+            };
+            sliderRoll->OnValueChanged = [&](float value)
+            {
+                rotRoll =  toRadians(value);
+            };
+            moveLeft->OnDown = [&]()
+            {
+                position.x -= MOVE_SPEED * deltaTime;
+            };
+            moveRight->OnDown = [&]()
+            {
+                position.x += MOVE_SPEED * deltaTime;
+            };
+
+            moveUp->OnDown = [&]()
+            {
+                position.y -= MOVE_SPEED * deltaTime;
+            };
+            moveDown->OnDown = [&]()
+            {
+                position.y += MOVE_SPEED * deltaTime;
+            };
+
+            moveFront->OnDown = [&]()
+            {
+                position.z -= MOVE_SPEED * deltaTime;
+            };
+            moveBack->OnDown = [&]()
+            {
+                position.z += MOVE_SPEED * deltaTime;
+            };
+
+            reset->OnClick = [&]()
+            {
+                rotYaw = 0;
+                rotPitch = 0;
+                rotRoll = 0;
+                position = Vector3(0,1,0);
+                sliderYaw->SetValue(0);
+                sliderPitch->SetValue(0);
+                sliderRoll->SetValue(0);
+            };
+
+            //mesh tool
+            buttonUv->OnClick = [&]()
+            {
+                model->MakePlanarMapping(uvForce);
+            };
+            sliderUv->OnValueChanged = [&](float value)
+            {
+                uvForce = value;
+            };
+            buttonCenter->OnClick = [&]()
+            {
+                model->Center();
+            };
+
+            buttonShades->OnClick = [&]()
+            {
+                model->ShadesOfGray();
+            };
+
+                switch (BlendState)
+                {
+                    case 0:
+                    {
+                        
+                        blndAnimation += 0.2f * deltaTime;
+                        if (blndAnimation > 1.0f) 
+                        {
+                            blndAnimation = 1.0f;
+                            
+                            BlendState=2;
+                        }
+                    //  model->Setlerp(blndAnimation);
+                        colorLerp->SetValue(blndAnimation);
+                    //  Log(0,"blndAnimation %f",blndAnimation);
+                        break;
+                    }
+                    case 1:
+                    {
+                        
+                        blndAnimation -= 0.2f * deltaTime;
+                        
+                        if (blndAnimation < 0.0f) 
+                        {
+                            
+                            blndAnimation = 0.0f;
+                            BlendState=2;
+                        }
+                    //   model->Setlerp(blndAnimation);
+                        colorLerp->SetValue(blndAnimation);
+                    //   Log(0,"blndAnimation %f",blndAnimation);
+                        break;
+                    }
+                    case 2:
+                    {
+                        
+                        //do nothing
+                    
+                        break;
+                    }
+                }
+
+            
+
+                if (state[SDL_SCANCODE_Q])      
+                    rotYaw  += ROTATE_SPEED *  deltaTime;
+                else if (state[SDL_SCANCODE_E])
+                    rotYaw -= ROTATE_SPEED *  deltaTime;
+
+                if (state[SDL_SCANCODE_W])
+                    rotPitch += ROTATE_SPEED *  deltaTime;
+                else if (state[SDL_SCANCODE_S])
+                    rotPitch -= ROTATE_SPEED *  deltaTime;
+
+                if (state[SDL_SCANCODE_A])
+                    rotRoll += ROTATE_SPEED *  deltaTime;
+                else if (state[SDL_SCANCODE_D])
+                    rotRoll -= ROTATE_SPEED *  deltaTime;
+
+
+
+                //3d stuff
+        
+                camera.Update();
+                
+                Matrix modelTraslate;
+                modelTraslate.Translate(position);
+
+                Matrix modelScale;
+                modelScale.Scale(1,1,1);
+        
+                Quaternion rotate;
+                rotate.FromEuler(rotPitch,rotYaw,rotRoll);
+
+                
+
+                Matrix modelRotate;
+                modelRotate.Rotate(rotate);
+
+                //order is important
+                Matrix modelTrasform = modelTraslate * modelScale * modelRotate;
+                Matrix trasform = projection3D * camera.matrix * modelTrasform;
+                model->SetMatrix(trasform);
+
+
+                Matrix mvp = projection3D * camera.matrix;
+                batch3D.SetMatrix(mvp);
+                texture->Bind();
+                
+                glEnable(GL_DEPTH_TEST);
+                glDisable(GL_BLEND);
+                if (backFaces->GetChecked())
+                {
+                    glDisable(GL_CULL_FACE);
+                }
+                else
+                {
+                
+                    glEnable(GL_CULL_FACE);
+                    glCullFace(GL_BACK);
+
+
+
+                }
+
+
+                model->Render();
+
+
+                glDisable(GL_CULL_FACE);
+
+
+                batch3D.DrawGrid(10,10);
+                batch3D.SetMatrix(mvp);
+                batch3D.Set3D();
+                batch3D.Render();
+
+               
+                
+
+
+
+
+            batch2D.DrawRectangle(20,18,210,20,Color(0.0,0.0,0.0,1),true);
+            batch2D.DrawRectangle(20,18,210,20,Color(1,1,1,1),false);
+            //  batch2D.DrawRectangle(20,180,210,20,Color(1.0,1.0,1.0,1),true);
+            
+
+            font.DrawText(&batch2D, "Luis Santos", Vector2(200, 400),  Color(1, 1, 1, 1));
+            font.DrawText(&batch2D, 20,20, Color(1, 1, 1, 1), "Fps:%f DeltaTime:%f",fps,deltaTime);
+
+
+                widgets.Update(deltaTime);
+                widgets.Render(&batch2D);
+            
+                batch2D.Set2D();
+                batch2D.Render();
+               
+        } else 
+        if (GameState==1)///prepare to load
+        {
+              
+            glClearColor(0.1f, 0.1f, 0.3f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            batch2D.DrawRectangle(0,0,SCREEN_WIDTH,SCREEN_HEIGHT,Color(0.1,0.1,0.1,1),true);
+            batch2D.DrawRectangle(1,1,SCREEN_WIDTH-1,SCREEN_HEIGHT-2,Color(1,1,1,1),false);
+            font.DrawText(&batch2D, "Please Wait!", Vector2(SCREEN_WIDTH/2, SCREEN_HEIGHT/2),  Color(1, 1, 1, 1));
+            batch2D.Set2D();
+            batch2D.Render();
+            SDL_GL_SwapWindow(window);
+
+
+              
+             GameState = 2;
+        } else  
+        if (GameState==2)///loading
+        {
+
+
+            const char* text[] = 
+            {
+                "Loading...",
+                "lOading..",
+                "loAding.",
+                "loaDing",
+                "loadIng.",
+                "loadiNg..",
+                "loadinG...",
+                "loading",
+            };
+
+            int count = sizeof(text) / sizeof(text[0]);
+            loadSpeed += LOAD_ANIM_SPEED * deltaTime;
+            if (loadSpeed > 1.0f)
+            {
+                loadSpeed = 0.0f;
+                loadFrame++;
+                if (loadFrame >= count) loadFrame = 0;
+            }
+            
+
+
+
+
+                batch2D.DrawRectangle(0,0,SCREEN_WIDTH,SCREEN_HEIGHT,Color(0.1,0.1,0.1,1),true);
+                batch2D.DrawRectangle(1,1,SCREEN_WIDTH-1,SCREEN_HEIGHT-2,Color(1,1,1,1),false);
+                font.DrawText(&batch2D, text[loadFrame], Vector2(SCREEN_WIDTH/2, SCREEN_HEIGHT/2),  Color(1, 1, 1, 1));
+                batch2D.Set2D();
+                batch2D.Render();
+      
+                if (isLoadMesh.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+                {
+                        bool state =false;
+                        try
+                        {
+                            state=isLoadMesh.get(); 
+
+                            if (!state)
+                                model->BuildCube(Vector3(1,1,1));
+                            else
+                                model->Build();
+                        }
+                        catch (const std::exception& e)
+                        {
+                            Log(2, "Error get  future state : %s", e.what());
+                        }
+                  
+                    GameState = 0;    
+                }
+            
+        } 
 
         
         SDL_GL_SwapWindow(window);
@@ -527,6 +674,7 @@ int main()
 
 
     }
+   //   SDL_DestroyMutex(mutex);
     widgets.Clear();
     delete model;
     delete texture;

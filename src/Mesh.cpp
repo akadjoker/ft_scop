@@ -14,36 +14,17 @@
 
 Surface::Surface(): m_material(-1)
 {
-
-    glGenVertexArrays(1, &m_buffer.vao) ;
-    glBindVertexArray(m_buffer.vao);
-
-    glGenBuffers(1, &m_buffer.vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, m_buffer.vbo);
-
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, position));
-
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texcoord));
-
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, color));
-
-
-    glEnableVertexAttribArray(3);
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
-
-
-    glGenBuffers(1, &m_buffer.ebo);
-
-    glBindVertexArray(0);
+    m_buffer.vao = 0;
+    m_buffer.vbo = 0;
+    m_buffer.ebo = 0;
+    m_isCentered=false;
 
 
 }
 
 Surface::~Surface()
 {
+    Log(1,"Surface release");
     glBindVertexArray(0);
     glDeleteBuffers(1, &m_buffer.vbo);
     glDeleteBuffers(1, &m_buffer.ebo);
@@ -52,9 +33,37 @@ Surface::~Surface()
 
 void Surface::Build()
 {
-    if (m_vertices.size() == 0 || m_indices.size() == 0)
-        return;
+  
+    if (m_vertices.size() == 0 || m_indices.size() == 0) return;
+    Log(1,"Surface Update %d %d ",m_vertices.size(),m_indices.size() );
+    if (m_buffer.vao == 0 || m_buffer.vbo == 0 || m_buffer.ebo == 0) 
+    {
+        
+        glGenVertexArrays(1, &m_buffer.vao) ;
+        glBindVertexArray(m_buffer.vao);
 
+        glGenBuffers(1, &m_buffer.vbo);
+        glBindBuffer(GL_ARRAY_BUFFER, m_buffer.vbo);
+
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, position));
+
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texcoord));
+
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, color));
+
+
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
+
+
+        glGenBuffers(1, &m_buffer.ebo);
+
+        glBindVertexArray(0);
+    }
+    
 
 
     glBindBuffer(GL_ARRAY_BUFFER, m_buffer.vbo);
@@ -83,6 +92,7 @@ int Surface::AddVertex(const Vertex &vertex)
 {
     m_vertices.push_back(vertex);
     m_boundingBox.addInternalPoint(vertex.position);
+    m_isCentered=false;
     return (int)m_vertices.size() - 1;
 }
 
@@ -102,6 +112,7 @@ int Surface::AddVertex(float x, float y, float z, float u, float v, float r, flo
     vertex.normal.y = 0.0f;
     vertex.normal.z = 0.0f;
     m_boundingBox.addInternalPoint(vertex.position);
+    m_isCentered=false;
     return AddVertex(vertex);
 }
 
@@ -121,12 +132,13 @@ int Surface::AddVertex(float x, float y, float z, float u, float v)
     vertex.normal.y = 0.0f;
     vertex.normal.z = 0.0f;
     m_boundingBox.addInternalPoint(vertex.position);
+    m_isCentered=false;
     return AddVertex(vertex);
 }
 
 int Surface::AddIndex(Uint32 index)
 {
-
+    m_isCentered=false;
     m_indices.push_back(index);
     return (int)m_indices.size() - 1;
 
@@ -134,14 +146,16 @@ int Surface::AddIndex(Uint32 index)
 
 int Surface::AddFace(Uint32 a, Uint32 b, Uint32 c)
 {
+    m_isCentered=false;
     AddIndex(a);
     AddIndex(b);
     AddIndex(c);
     return (int)m_indices.size() - 3;
 }
 
-void Surface::Center()
+bool  Surface::Center()
 {
+    if (m_isCentered)     return false;
     Vector3 center = m_boundingBox.GetCenter();
     for (Uint32 i = 0; i < (Uint32)m_vertices.size(); i++)
     {
@@ -151,12 +165,14 @@ void Surface::Center()
         vertex.position.z -= center.z;
         m_vertices[i] = vertex;
     }
+    m_isCentered=true;
+    return true;
 }
 
-void Surface::MakePlanarMapping(float resolution)
+bool Surface::MakePlanarMapping(float resolution)
 {
-    if (m_vertices.size() == 0)        return;
-    if (m_indices.size() == 0)        return;
+    if (m_vertices.size() == 0)        return false;
+    if (m_indices.size() == 0)        return false;
 
 
     for (Uint32 i = 0; i < (Uint32)m_indices.size(); i+=3)
@@ -205,17 +221,17 @@ void Surface::MakePlanarMapping(float resolution)
 
     }
 
-
+    return true;
 
 
 }
 
-void Surface::CalculateNormals()
+bool Surface::CalculateNormals()
 {
     if (m_vertices.size() == 0)
-        return;
+        return false;
     if (m_indices.size() == 0)
-        return;
+        return false;
     for (Uint32 i = 0; i < (Uint32)m_vertices.size(); i++)
     {
         Vertex& vertex = m_vertices[i];
@@ -266,6 +282,7 @@ void Surface::CalculateNormals()
         }
         m_vertices[i] = vertex;
     }
+    return true;
 }
 
 //***************************************************************************************
@@ -380,6 +397,8 @@ bool Mesh::Load(const std::string &filename)
         Mtl = "";
 
    
+   try
+   {
 
         bool status = Read(fileDataConst);
         if (!status)
@@ -387,19 +406,55 @@ bool Mesh::Load(const std::string &filename)
             Log(2,"Error reading OBJ(%s) data",filename.c_str());
             return false;
         }
+        return status;
+   }
+    catch (const std::exception& e)
+    {
+        Log(2,"Error reading OBJ(%s) : Error: %s",filename.c_str(),e.what());
+        return false;
+    }
 
-        Log(0,"OBJ(%s) loaded successfully",filename.c_str());
-        return true;
+       
+        return false;
 
 
 }
 
+static bool IsNumber(const std::string& s)
+{
+    try
+    {
+        size_t pos;
+        std::stod(s, &pos);
+        return pos == s.size();
+    }
+    catch (const std::exception&)
+    {
+        return false;
+    }
+}
+
+
+
+// static bool hasNumberBetweenSlashes(const std::string &input)
+// {
+//     size_t firstSlash = input.find("//");
+//     return (firstSlash == std::string::npos);
+// }
+
+// static bool hasNumberAfterLastSlash(const std::string &input)
+// {
+//     size_t lastSlash = input.find_last_of('/');
+//     return (lastSlash != std::string::npos && lastSlash < input.size() - 1 && std::isdigit(input[lastSlash + 1]));
+// }
+
+
+//this code contain protection because off some stupid students that 
+//like to inventing crazy bugs on  the avaliation, the cost is a slow loading time
     bool Mesh::Read(const char* buffer)
     {
 
-        try 
-        {
-
+        
        	    std::string curline;
 			int i = -1;
 			
@@ -424,8 +479,7 @@ bool Mesh::Load(const std::string &filename)
                 {
                     
 					auto parts = Split(curline, ' ');
-                  //  if (parts.size()<=1) continue;
-                  //  Log(0, "OBJ: %s", curline.c_str());
+  
 
 					if (parts[0] == "v")
                     { 
@@ -433,39 +487,53 @@ bool Mesh::Load(const std::string &filename)
                        
                        //   std::cout<<"x:"<<parts[1]<<" y:"<<parts[2].c_str()<<" z:"<<parts[3].c_str()<<std::endl;
 
-						vertices.push_back(Vector3((float)atof(parts[1].c_str()), (float)atof(parts[2].c_str()), (float)atof(parts[3].c_str())));
+					vertices.push_back(Vector3((float)std::stof(parts[1]), (float)std::stof(parts[2]), (float)std::stof(parts[3])));
 					} else if (parts[0] == "vt")
                     {
-						texposs.push_back(Vector2((float)atof(parts[1].c_str()), (float)atof(parts[2].c_str())));
+						texposs.push_back(Vector2((float)std::stof(parts[1]), (float)std::stof(parts[2])));
                         
 					} else if (parts[0] == "vn")
                     {
                         
-						normals.push_back(Vector3((float)atof(parts[1].c_str()), (float)atof(parts[2].c_str()), (float)atof(parts[3].c_str())));
+						normals.push_back(Vector3((float)std::stof(parts[1]), (float)std::stof(parts[2]), (float)std::stof(parts[3])));
 					} else if (parts[0] == "f")
                     {
 						if (parts.size() == 4)
                         {
-                             // triangle
-                           //  Log(0,"Triangle");
-					 		add_triangle(surface, vertices, normals, texposs, parts[1], parts[2], parts[3]);
+
+                            //std::cout<<"parts[1]:"<<parts[1]<<" parts[2]:"<<parts[2]<<" parts[3]:"<<parts[3]<<std::endl;
+           
+                          // Log(0,"Triangle");
+                          
+                            add_triangle(surface, vertices, normals, texposs, parts[1], parts[2], parts[3]);
+                          
+              
 
 						} else if (parts.size() == 5)
                         {
-                           // Log(0,"Quad");
+                            //  std::cout<<"parts[1]:"<<parts[1]<<" parts[2]:"<<parts[2]<<" parts[3]:"<<parts[3]<<" parts[4]:"<<parts[4]<<std::endl;
+                           
+
+                          //  Log(0,"Quad");
                             // quad
 					   		add_triangle(surface, vertices, normals, texposs, parts[1], parts[2], parts[3]);
 							add_triangle(surface, vertices, normals, texposs, parts[1], parts[3], parts[4]);
 						} else
                         {
 
-							Log(2," Adding polygon  %d", parts.size());
+				
                             std::vector<std::string> polygonVertices;
                             for (size_t i = 1; i < parts.size(); ++i) 
                             {
+                                std::cout<<"parts["<<i<<"]:"<<parts[i]<<std::endl;
                                 polygonVertices.push_back(parts[i]);
                             }
-                            add_polygon(surface, vertices, normals, texposs, polygonVertices);
+                            if (polygonVertices.size() >= 3)
+                            {
+                                Log(1," Adding polygon  %d", parts.size());
+                                add_polygon(surface, vertices, normals, texposs, polygonVertices);
+                            }
+                            
         				}
 					} else if (parts[0] == "usemtl")
                     {
@@ -489,52 +557,98 @@ bool Mesh::Load(const std::string &filename)
 				if (l != '\n' && l != '\r') curline += l;
 			}
 
-        Build ();
-        return true;
-        }
-        
-        catch (const std::exception &e)
+        if (surface->m_vertices.size() == 0)
         {
-            
-            Log(2, "Ups  %s", e.what());
-            
+            Log(1,"No vertices found");
             return false;
         }
+
+
+        return true;
+        
+        
+      
     }
 
-   
+//this code contain protection because off some stupid students that like to inventing crazy bugs on  the avaliation, the cost is a slow loading time
     void Mesh::add_polygon(Surface *surf, const std::vector<Vector3>& vertices, const std::vector<Vector3>& normals, const std::vector<Vector2>& texposs, const std::vector<std::string>& polygonVertices)
     {
     std::vector<Vector3> polyVertices;
     std::vector<Vector2> polyTexCoords;
     std::vector<Vector3> polyNormals;
 
+    bool containUV = false;
+    bool containNormals = false;
+
+
 
     for (auto& vertex : polygonVertices)
     {
         auto data = Split(vertex, '/');
-        int vertID = std::stoi(data[0]) - 1;
-        int texID = std::stoi(data[1]) - 1; 
-        int normID = std::stoi(data[2]) - 1;
+
+        if (data.size() == 3)
+        {
+            containNormals = true;
+            containUV = true;
+        } else if (data.size() == 2)
+        {
+            containNormals = false;
+            containUV = false;
+        } else if (data.size() == 1)
+        {
+            containNormals = false;
+            containUV = false;
+        } else
+        {
+            Log(1," malformed vertex");
+            return;
+        }
+  
+       
 
 
-        if (vertID < 0)
-        {
-            vertID += vertices.size() + 1;
-        }
-        if (texID < 0)
-        {
-            texID += texposs.size() + 1;
-        }
-        if (normID < 0)
-        {
-            normID += normals.size() + 1;
-        }
 
-        polyVertices.push_back(vertices[vertID]);
-        polyTexCoords.push_back(texposs[texID]);
-        polyNormals.push_back(normals[normID]);
+
+      
+                if (containUV)
+                {
+                    int texID = std::stoi(data[1]) - 1; 
+                    if (texID < 0)
+                    {
+                        texID += texposs.size() + 1;
+                    }
+                    if(texID < (int)texposs.size()) 
+                        polyTexCoords.push_back(texposs[texID]);
+                }
+
+                if (containNormals)
+                {
+                    int normID = std::stoi(data[2]) - 1;
+                    if (normID < 0)
+                    {
+                        normID += normals.size() + 1;
+                    }
+                    if(normID < (int)normals.size())
+                        polyNormals.push_back(normals[normID]);
+                }
+   
+
+            int vertID = std::stoi(data[0]) - 1;
+            if (vertID < 0)
+            {
+                vertID += vertices.size() + 1;
+            }
+
+            if (vertID >= (int)vertices.size())
+            {
+                Log(1," malformed vertex");
+                return;
+            }
+            polyVertices.push_back(vertices[vertID]);
+
     }
+
+
 
     // Triangulate the polygon
     for (size_t i = 1; i < polyVertices.size() - 1; ++i)
@@ -545,85 +659,176 @@ bool Mesh::Load(const std::string &filename)
         v_b.position = polyVertices[i];
         v_c.position = polyVertices[i + 1];
 
-        v_a.texcoord = polyTexCoords[0];
-        v_b.texcoord = polyTexCoords[i];
-        v_c.texcoord = polyTexCoords[i + 1];
+        if (containUV)
+        {
 
-        v_a.normal = polyNormals[0];
-        v_b.normal = polyNormals[i];
-        v_c.normal = polyNormals[i + 1];
+         v_a.texcoord = polyTexCoords[0];
+         v_b.texcoord = polyTexCoords[i];
+         v_c.texcoord = polyTexCoords[i + 1];
+        }
+
+        if (containNormals)
+        {
+         v_a.normal = polyNormals[0];
+         v_b.normal = polyNormals[i];
+         v_c.normal = polyNormals[i + 1];
+        }
 
 
         Uint32 fa = surf->AddVertex(v_a);
         Uint32 fb = surf->AddVertex(v_b);
         Uint32 fc = surf->AddVertex(v_c);
 
-        surf->AddFace(fa, fb, fc);
+        surf->AddFace(fc, fb, fa);
     }
+   
 }
 
-
+//this code contain protection because off some stupid students that like to ivinventingent crazy bugs on  the avaliation, the cost is a slow loading time
     void   Mesh::add_triangle(Surface *surf,  const std::vector<Vector3>& vertices, const std::vector<Vector3>& normals, const std::vector<Vector2>& texposs, const std::string& a, const std::string& b, const std::string& c)
     {
+      
+
 			auto data_a = Split(a, '/');
 			auto data_b = Split(b, '/');
 			auto data_c = Split(c, '/');
+
+            bool containUVa = data_a.size() == 3;
+            bool containUVb = data_b.size() == 3;
+            bool containUVc = data_c.size() == 3;
+
+            bool containNormalsa = containUVa;
+            bool containNormalsb = containUVb;
+            bool containNormalsc = containUVc;
+
+
 
 			Vertex v_a;
 			Vertex v_b;
 			Vertex v_c;
 
 
-			int vertID_a = atoi(data_a[0].c_str()) - 1;
-			int vertID_b = atoi(data_b[0].c_str()) - 1;
-			int vertID_c = atoi(data_c[0].c_str()) - 1;
+			int vertID_a = std::stoi(data_a[0]) - 1;
+			int vertID_b = std::stoi(data_b[0]) - 1;
+			int vertID_c = std::stoi(data_c[0]) - 1;
+
+          
 
 		
 			if (vertID_a < 0) vertID_a += vertices.size() + 1;
 			if (vertID_b < 0) vertID_b += vertices.size() + 1;
 			if (vertID_c < 0) vertID_c += vertices.size() + 1;
 
+         
+            if (vertID_a >=(int) vertices.size() || vertID_b >=(int) vertices.size() || vertID_c >=(int) vertices.size())
+            {
+                Log(1," malformed vertex");
+                return;
+            }
+
 			v_a.position = vertices[vertID_a];
 			v_b.position = vertices[vertID_b];
 			v_c.position = vertices[vertID_c];
 
-			// UV
-			if (data_a.size() > 1 && data_a[1].size() > 0)
-             {
-				int texID_a = atoi(data_a[1].c_str()) - 1;
-				int texID_b = atoi(data_b[1].c_str()) - 1;
-				int texID_c = atoi(data_c[1].c_str()) - 1;
 
-				if (texID_a < 0) texID_a += texposs.size() + 1;
-				if (texID_b < 0) texID_b += texposs.size() + 1;
-				if (texID_c < 0) texID_c += texposs.size() + 1;
 
-				v_a.texcoord = texposs[texID_a];
-				v_b.texcoord = texposs[texID_b];
-				v_c.texcoord = texposs[texID_c];
+			// // UV
+            if (containUVa && containUVb && containUVc)
+            {
+			if (data_a.size() > 1 && data_a[1].size() > 0 && 
+                data_b.size() > 1 && data_b[1].size() > 0 && 
+                data_c.size() > 1 && data_c[1].size() > 0)
+            {
+            //      Log(1,"uv a %d %s",data_a[1].size(),data_a[1].c_str());
+            //      Log(1,"uv b %d %s",data_b[1].size(),data_b[1].c_str());
+            //      Log(1,"uv c %d %s",data_c[1].size(),data_c[1].c_str());
+
+                 bool ignore =false;
+              
+
+                    int texID_a = std::stoi(data_a[1]) - 1;
+                    int texID_b = std::stoi(data_b[1]) - 1;
+                    int texID_c = std::stoi(data_c[1]) - 1;
+
+                    if (texID_a < 0) texID_a += texposs.size() + 1;
+                    if (texID_b < 0) texID_b += texposs.size() + 1;
+                    if (texID_c < 0) texID_c += texposs.size() + 1;
+
+                    if (texID_a < 0 || texID_b < 0 || texID_c < 0)
+                    {
+                        Log(1," malformed UV");
+                        ignore = true;
+                    }
+                    if (texID_a >=(int) texposs.size() || texID_b >=(int) texposs.size() || texID_c >=(int) texposs.size())
+                    {
+                        Log(1,"malformed UV");
+                        ignore = true;    
+                    }
+                    if (!ignore)
+                    {
+                        v_a.texcoord = texposs[texID_a];
+                        v_b.texcoord = texposs[texID_b];
+                        v_c.texcoord = texposs[texID_c];
+                    }
+                 
+             }
 			}
 
-			// normals
-			if (data_a.size() > 2 && data_a[2].size() > 0)
-            {
-				int normID_a = atoi(data_a[2].c_str()) - 1;
-				int normID_b = atoi(data_b[2].c_str()) - 1;
-				int normID_c = atoi(data_c[2].c_str()) - 1;
+			 // normals
+             if (containNormalsa && containNormalsb && containNormalsc)
+             {
+			 if (data_a.size() > 2 && data_a[2].size() >  0 && 
+                 data_b.size() > 2 && data_b[2].size() >  0 && 
+                 data_c.size() > 2 && data_c[2].size() >  0)
+             {
+              
+                      bool ignore =false;
+
+              
+                    
+                // Log(1,"normal a %d %s",data_a[2].size(),data_a[2].c_str());
+                // Log(1,"normal b %d %s",data_b[2].size(),data_b[2].c_str());
+                // Log(1,"normal c %d %s",data_c[2].size(),data_c[2].c_str());
+
+
+				int normID_a = std::stoi(data_a[2]) - 1;
+				int normID_b = std::stoi(data_b[2]) - 1;
+				int normID_c = std::stoi(data_c[2]) - 1;
 
 				if (normID_a < 0) normID_a += normals.size() + 1;
 				if (normID_b < 0) normID_b += normals.size() + 1;
 				if (normID_c < 0) normID_c += normals.size() + 1;
 
-			}
+                if (normID_a < 0 || normID_b < 0 || normID_c < 0)
+                {
+                    Log(1," malformed normal negative ");
+                    ignore=true;
+                }
+                if (normID_a >=(int) normals.size() || normID_b >=(int) normals.size() || normID_c >=(int) normals.size())
+                {
+                    Log(1," malformed normal");
+                     ignore=true;
+                }
+
+                if (!ignore)
+                {
+                v_a.normal = normals[normID_a];
+                v_b.normal = normals[normID_b];
+                v_c.normal = normals[normID_c];
+                }
+                
+              }
+			 }
 
             Uint32 fa = surf->AddVertex(v_a);
             Uint32 fb = surf->AddVertex(v_b);
             Uint32 fc = surf->AddVertex(v_c);
 
-            surf->AddFace(fa, fb, fc);
+            surf->AddFace(fc, fb, fa);
+        
+       
 
-
-		}
+}
 
 
 
@@ -632,7 +837,7 @@ void Mesh::Render()
 {
     if (m_surfaces.size() == 0)         return;
 
-    glUseProgram(defaultShaderId);
+         glUseProgram(defaultShaderId);
         GLfloat mat[16]=
         {
                 matrix.m0, matrix.m1, matrix.m2, matrix.m3,
@@ -686,8 +891,6 @@ void Mesh::Build()
     for (auto surface : m_surfaces)
     {
         surface->CalculateNormals();
-     //   surface->Center();
-     //   surface->MakePlanarMapping(1.0f);
         surface->Build();
     }
 }
@@ -697,8 +900,8 @@ void Mesh::MakePlanarMapping(float value)
 {
     for (auto surface : m_surfaces)
     {
-        surface->MakePlanarMapping(value);
-        surface->Build();
+        if (surface->MakePlanarMapping(value))
+            surface->Build();
     }
 }
 
@@ -706,8 +909,8 @@ void Mesh::Center()
 {
     for (auto surface : m_surfaces)
     {
-        surface->Center();
-        surface->Build();
+        if (surface->Center())
+            surface->Build();
     }
 }
 
@@ -828,4 +1031,51 @@ Mesh *Mesh::CreateCube(const Vector3 &size)
 
 
     return mesh;
+}
+
+void Mesh::BuildCube(const Vector3 &size)
+{
+    Clear();
+    Surface *surface = addSurface(0);
+
+    surface->m_indices=
+    {
+        0,2,1,   0,3,2,
+        1,5,4,   1,2,5,
+        4,6,7,   4,5,6,
+        7,3,0,   7,6,3,
+        9,5,2,   9,8,5,
+        0,11,10,   0,10,7
+    };
+
+
+
+    surface->AddVertex(0, 0, 0, 0.0f, 1.0f);
+    surface->AddVertex(1, 0, 0, 1.0f, 1.0f);
+
+    surface->AddVertex(1, 1, 0, 1.0f, 0.0f);
+    surface->AddVertex(0, 1, 0, 0.0f, 0.0f);
+
+    surface->AddVertex(1, 0, 1, 0.0f, 1.0f);
+    surface->AddVertex(1, 1, 1, 0.0f, 0.0f);
+
+    surface->AddVertex(0, 1, 1, 1.0f, 0.0f);
+    surface->AddVertex(0, 0, 1, 1.0f, 1.0f);
+
+    surface->AddVertex(0, 1, 1, 0.0f, 1.0f);
+    surface->AddVertex(0, 1, 0, 1.0f, 1.0f);
+
+    surface->AddVertex(1, 0, 1, 1.0f, 0.0f);
+    surface->AddVertex(1, 0, 0, 0.0f, 0.0f);
+
+
+
+	for (int i=0; i<12; ++i)
+	{
+        Vector3 &v = surface->m_vertices[i].position;
+        v -= Vector3(0.5f, 0.5f, 0.5f);
+        v *= size;
+	}
+
+    Build();
 }

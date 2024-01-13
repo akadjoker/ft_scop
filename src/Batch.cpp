@@ -587,6 +587,20 @@ void RenderBatch::DrawGrid(int slices, float spacing)
     
 }
 
+void RenderBatch::Set2D()
+{
+    glDisable(GL_DEPTH_TEST);    
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+}
+
+void RenderBatch::Set3D()
+{
+       glEnable(GL_DEPTH_TEST);
+       glDisable(GL_BLEND);
+
+}
+
 void RenderBatch::DrawTexture(Texture *texture, float x, float y, float width, float height, const Rectangle &clip, const Color &color)
 {
 

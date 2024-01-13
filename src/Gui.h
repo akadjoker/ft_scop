@@ -10,6 +10,7 @@ class Window;
 class Slider;
 class Label;
 class Button;
+class CheckBox;
 
 enum GUI_COLOR
 {
@@ -154,6 +155,7 @@ public:
     Slider *CreateSlider(bool vertical, float x, float y, float width, float height, float min, float max, float value);
     Label  *CreateLabel(const std::string& text, float x, float y);
     Button *CreateButton(const std::string& text, float x, float y, float width, float height);
+    CheckBox *CreateCheckBox(const std::string& text, bool state, float x, float y, float width, float height);
 
 protected:
     void OnDraw(RenderBatch* batch) override;
@@ -224,7 +226,34 @@ private:
     Rectangle m_bounds;
 };
 
+class CheckBox : public Widget
+{
+    friend class Window;
+public:
+    CheckBox(const std::string& text, bool state, float x, float y, float width, float height);
 
+    void SetText(const std::string& text) { m_text = text; }
+    const std::string& GetText() const { return m_text; }
+
+    bool GetChecked() const { return m_checked; }
+
+    std::function<void()> OnClick;
+    std::function<void()> OnDown;
+private:
+    void OnDraw(RenderBatch* batch) override;
+    void OnUpdate(float delta) override;
+    void OnMouseMove(int x, int y) override;
+    void OnMouseDown(int x, int y, int button) override;
+    void OnMouseUp(int x, int y, int button) override;
+    void OnKeyDown(Uint32 key) override;
+    void OnKeyUp(Uint32 key) override;
+
+    std::string m_text;
+    bool   m_checked;
+    bool    m_hover;
+    bool    m_down;
+    Rectangle m_bounds;
+};            
 
 
 class Slider : public Widget

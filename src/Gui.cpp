@@ -417,6 +417,16 @@ Button *Window::CreateButton(const std::string &text, float x, float y, float wi
 
 }
 
+CheckBox *Window::CreateCheckBox(const std::string &text, bool state, float x, float y, float width, float height)
+{
+    
+        CheckBox *checkbox = new CheckBox(text, state, x, y, width, height);
+        checkbox->m_gui  = this->m_gui;
+        Add(checkbox);
+        return checkbox;
+ 
+}
+
 Slider::Slider(bool vertical, float x, float y, float width, float height, float min, float max, float value): Widget()
 {
     m_vertical = vertical;
@@ -676,3 +686,105 @@ void Button::OnKeyUp(Uint32 key)
                 OnClick();
         }
 }
+
+CheckBox::CheckBox(const std::string &text, bool state, float x, float y, float width, float height): Widget()
+{
+    m_text = text;
+    m_position.x = x;
+    m_position.y = y;
+    m_size.x = width;
+    m_size.y = height;
+    m_checked = state;
+    m_down = false;
+    m_focus = false;
+    m_hover = false;
+
+}
+
+void CheckBox::OnDraw(RenderBatch *batch)
+{
+    Skin * skin = m_gui->GetSkin();
+    Font * font = skin->GetFont();
+    
+    batch->DrawRectangle((int)GetRealX(),(int) GetRealY(), (int)m_size.x,(int) m_size.y, skin->GetColor(BUTTON_FACE),true);
+    if (m_hover)
+        batch->DrawRectangle((int)GetRealX(),(int) GetRealY(), (int)m_size.x,(int) m_size.y, Color(0.2f, 0.2f, 0.2f),false);
+
+    float bw = m_size.x / 2;
+    float bh = m_size.y / 2;
+
+    if (m_checked)
+        batch->DrawRectangle((int)GetRealX()+(bw/2),(int) GetRealY()+(bh/2), bw,bh, Color(0.2f, 0.2f, 0.2f),true);
+
+    int w  = font->GetWidth(m_text.c_str());
+    float h = font->GetHeight();
+
+    //Log(2, "w %f h %f", w, h);
+
+    font->DrawText(batch, m_text.c_str(), Vector2(GetRealX() + (m_size.x + 1), GetRealY() + (m_size.y / 2) - (h/2)), Color::WHITE);
+}
+
+void CheckBox::OnUpdate(float delta)
+{
+    (void)delta;
+  
+
+      m_bounds = Rectangle(GetRealX(),GetRealY(), m_size.x+1, m_size.y+1);
+
+      
+  
+}
+
+void CheckBox::OnMouseMove(int x, int y)
+{
+    m_focus = m_bounds.Contains(x, y);
+    m_hover = m_focus;
+}
+
+void CheckBox::OnMouseDown(int x, int y, int button)
+{
+    if (button == 1)
+    if (m_bounds.Contains(x, y))
+    {
+        m_down = true;
+
+      
+    }
+}
+
+void CheckBox::OnMouseUp(int x, int y, int button)
+{
+    if (button == 1)
+    if (m_bounds.Contains(x, y))
+    {
+        m_checked = !m_checked;
+        m_down = false;
+        if (OnClick)
+            OnClick();
+    }
+}
+
+void CheckBox::OnKeyDown(Uint32 key)
+{
+        if (iskeyMappped && m_gui!=nullptr)  
+        if (key == m_key && !m_down)
+        {
+            m_down = true;
+            if (OnDown)
+                OnDown();
+        }
+
+}
+
+void CheckBox::OnKeyUp(Uint32 key)
+{
+        if (iskeyMappped && m_gui!=nullptr)  
+        if (key == m_key && m_down)
+        {
+            m_down = false;
+            if (OnClick)
+                OnClick();
+        }
+}
+
+
