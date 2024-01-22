@@ -1,10 +1,7 @@
 #include "Texture.h"    
 #include "File.h"
 
-//    #define STB_IMAGE_IMPLEMENTATION
-// #include "stb_image.h"
-//       #define STB_IMAGE_WRITE_IMPLEMENTATION
-// #include "stb_image_write.h"
+
 
 Texture::Texture()
 
@@ -19,10 +16,11 @@ Texture::~Texture()
     if (id != 0)
     {
         glDeleteTextures(1, &id);
+        Log(0,"Texture [%d] deleted",id);
     }
 }
 
-bool Texture::Load(const std::string &filePath)
+bool Texture::Load(const std::string &filePath,bool flip)
 {
       Uint8 *dst;
       int channels;
@@ -41,7 +39,8 @@ bool Texture::Load(const std::string &filePath)
     file.ReadUint8();//skip
 
     Uint8 imageType = file.ReadUint8();
-    if (imageType != 2)
+    
+    if (imageType != 2 && imageType != 10)
     {
         Log(2,"Error reading TGA data, unsupported ");
         createDefault();
@@ -64,14 +63,50 @@ bool Texture::Load(const std::string &filePath)
     }
 
     file.Seek(idLength +1, true);
-    channels = (pixelDepth / 8);
+    channels = (pixelDepth / 8); // bytes per pixel
 
     Log(1,"Image  (%d %d)   %d  %d",width,height,pixelDepth,channels);
 
 
-    Uint32 imageSize = width * height * (pixelDepth / 8);
+    Uint32 imageSize = width * height * channels;
+    if (imageType==2)
+    {
     dst = new Uint8[imageSize];
     file.Read(dst, imageSize);
+    } else 
+    if (imageType==10)
+    {
+        dst = new Uint8[imageSize];
+        Uint32 currentByte = 0;
+        while (currentByte < imageSize)
+        {
+            Uint8 chunkHeader = file.ReadUint8();
+            if (chunkHeader < 128)
+            {
+                chunkHeader++;
+                file.Read(&dst[currentByte], channels * chunkHeader);
+                currentByte += channels * chunkHeader;
+                
+            }
+            else
+            {
+                chunkHeader -= 127;
+                int dataOffset = currentByte;
+                file.Read(&dst[dataOffset], channels);
+                currentByte += channels;
+                for(int count=1;count < chunkHeader;count++)
+                {
+                    for(int i=0;i<channels;i++)
+                    {
+                        dst[currentByte + i] = dst[dataOffset + i];
+                    }
+                    currentByte += channels;
+                }
+                
+            }
+        }
+
+    }
 
 
 
@@ -80,7 +115,7 @@ bool Texture::Load(const std::string &filePath)
     {
 
         //flip vertical 
-
+        if (flip)
         for (int y = 0; y < height / 2; y++)
         {
             for (int x = 0; x < width; x++)
@@ -116,7 +151,7 @@ bool Texture::Load(const std::string &filePath)
     {
         
         //flip vertical
-
+        if (flip)
         for (int y = 0; y < height / 2; y++)
         {
             for (int x = 0; x < width; x++)
@@ -172,7 +207,7 @@ bool Texture::Load(const std::string &filePath)
      Log(0,"Image  %d %d %d ",width,height,channels);
 
     id = CreateTexture(dst, width, height,  format);
-  //  stbi_write_png("test.png",width,height,channels,dst, width*channels);
+    //stbi_write_png("test.png",width,height,channels,dst, width*channels);
 
     delete[] dst;
     // Everything went well :)
@@ -190,8 +225,21 @@ void Texture::createDefault()
     id = CreateTexture(pixels, width, height, format);
 }
 
-void Texture::Bind()
+void Texture::Bind(int layer)
 {
     if (id != 0)
+    {
+        glActiveTexture(GL_TEXTURE0 + layer);
         glBindTexture(GL_TEXTURE_2D, id);
+    }
+}
+
+void Texture::Release()
+{
+    if (id != 0)
+    {
+        glDeleteTextures(1, &id);
+        Log(0,"Texture [%d] deleted",id);
+    }
+    id = 0;
 }

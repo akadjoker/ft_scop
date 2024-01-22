@@ -294,7 +294,7 @@ bool Surface::CalculateNormals()
 Mesh::Mesh()
 {
     const char *defaultVShaderCode =
-    "#version 320   es                    \n"
+    "#version 400 core                    \n"
      "precision mediump float;           \n"
     "in vec3 vertexPosition;            \n"
     "in vec2 vertexTexCoord;            \n"
@@ -311,7 +311,7 @@ Mesh::Mesh()
 
 
     const char *defaultFShaderCode =
-    "#version 320  es    \n"
+    "#version 400 core    \n"
     "precision mediump float;           \n"
     "in vec2 fragTexCoord;              \n"
     "in vec4 fragColor;                 \n"

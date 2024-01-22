@@ -6,8 +6,8 @@
 Font::Font()
 {
     m_texture = new Texture();
-    m_texture->Load("resources/font.tga");
-    Load("resources/font.fnt");
+    m_texture->Load("resources/font2.tga",false);
+    Load("resources/font2.fnt");
 }
 
 Font::~Font()
